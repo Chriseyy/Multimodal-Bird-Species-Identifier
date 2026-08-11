@@ -26,7 +26,7 @@ def train():
     criterion = nn.CrossEntropyLoss()
     optimizer = AdamW(model.resnet.fc.parameters(), lr=1e-3, weight_decay=1e-4)
 
-    epochs = 10
+    epochs = 15
     print("\n--- Starting Vision Training (ResNet-18) ---")
     
     for epoch in range(1, epochs + 1):
