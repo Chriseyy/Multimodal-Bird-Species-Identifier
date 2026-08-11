@@ -22,9 +22,9 @@ def train():
     val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 
     # Load ResNet-18 model & optimize classifier parameters
-    model = BirdVisionResNet(num_classes=len(full_dataset.classes)).to(device)
+    model = BirdVisionResNet(num_classes=len(full_dataset.classes), freeze_backbone=False).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = AdamW(model.resnet.fc.parameters(), lr=1e-3, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
 
     epochs = 20
     print("\n--- Starting Vision Training (ResNet-18) ---")

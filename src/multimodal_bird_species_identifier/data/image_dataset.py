@@ -6,9 +6,10 @@ from torch.utils.data import DataLoader
 def get_image_transforms():
     """Defines training data augmentation and validation transforms."""
     train_transforms = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
-        transforms.RandomHorizontalFlip(),
+        # Direct zoom-crop on raw images (skips pre-resize to avoid double interpolation)
+        # scale=(0.4, 1.0) forces the network to learn zoomed-in bird features
+        transforms.RandomResizedCrop(224, scale=(0.4, 1.0)),
+        transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomRotation(15),
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.ToTensor(),
@@ -16,8 +17,10 @@ def get_image_transforms():
                              std=[0.229, 0.224, 0.225])
     ])
 
+    # Validation pipeline that preserves aspect ratio instead of squishing images
     val_transforms = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], 
                              std=[0.229, 0.224, 0.225])
