@@ -86,6 +86,6 @@ def download_bird_images(species_name: str, max_images: int = 30, output_dir: st
 
 if __name__ == "__main__":
     for species in TARGET_SPECIES:
-        download_bird_images(species, max_images=30)
+        download_bird_images(species, max_images=50)
         # 3-second pause between species to avoid rate limits
         time.sleep(3)
