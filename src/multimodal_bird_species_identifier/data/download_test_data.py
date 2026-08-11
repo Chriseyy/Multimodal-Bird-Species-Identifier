@@ -47,7 +47,7 @@ def download_test_audio(species, save_dir, count=2):
         recordings = data.get("recordings", [])
         
         # Skip the first 50 results because they are used in the training set
-        unseen_recordings = recordings[50:]
+        unseen_recordings = recordings[100:]
         
         saved = 0
         for rec in unseen_recordings:
@@ -80,7 +80,7 @@ def download_test_images(species, save_dir, count=2):
         "taxon_name": search_name,
         "has[]": "photos",
         "quality_grade": "research",
-        "per_page": 20,
+        "per_page": 50,
         "page": 3 
     }
     

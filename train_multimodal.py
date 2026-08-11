@@ -25,7 +25,6 @@ class PairedMultimodalDataset(Dataset):
             img_files = sorted(glob.glob(os.path.join(image_dir, cls_name, "*.jpg")))
             aud_files = sorted(glob.glob(os.path.join(audio_dir, cls_name, "*.mp3")))
             
-            # Für jedes Bild suchen wir zufällig ein Audio der gleichen Art aus
             for img_path in img_files:
                 if aud_files:
                     self.samples.append((img_path, aud_files, self.class_to_idx[cls_name]))

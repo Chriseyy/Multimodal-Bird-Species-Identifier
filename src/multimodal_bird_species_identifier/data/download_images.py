@@ -3,7 +3,6 @@ import time
 import requests
 from PIL import Image
 from io import BytesIO
-from ddgs import DDGS
 
 TARGET_SPECIES = [
     "Parus major",         
@@ -18,74 +17,116 @@ TARGET_SPECIES = [
     "Dendrocopos major"    
 ]
 
-BAD_WORDS = ["egg", "eier", "nest", "draw", "illustration", "diagram", "skull"]
+def get_taxon_id(species_name):
+    """Fetches the official iNaturalist Taxon ID."""
+    url = "https://api.inaturalist.org/v1/taxa"
+    headers = {"User-Agent": "MultimodalBirdIdentifier/1.0 (Student Project)"}
+    params = {"q": species_name, "per_page": 1}
+    
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        if response.status_code == 200:
+            results = response.json().get("results", [])
+            if results:
+                return results[0].get("id")
+    except Exception as e:
+        print(f"Error fetching Taxon ID for {species_name}: {e}")
+    return None
 
-def download_bird_images(species_name: str, max_images: int = 30, output_dir: str = "data/raw/images"):
+def download_bird_images(species_name: str, max_images: int = 100, output_dir: str = "data/raw/images"):
     folder_name = species_name.replace(" ", "_")
     save_path = os.path.join(output_dir, folder_name)
     os.makedirs(save_path, exist_ok=True)
 
     existing_files = [f for f in os.listdir(save_path) if f.endswith('.jpg')]
-    if len(existing_files) >= max_images:
-        print(f"Folder for {species_name} already contains {len(existing_files)} images. Skipping.")
-        return
-
-    print(f"\n--- Starting image search for: {species_name} ---")
-
-    query = f"{species_name} bird photo"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
-    results = []
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.images(query, max_results=max_images + 20))
-    except Exception as e:
-        print(f"Search error for {species_name}: {e}")
-        return
-
-    if not results:
-        print(f"No results found for: {species_name}")
-        return
-
     saved_count = len(existing_files)
-    for item in results:
-        if saved_count >= max_images:
-            break
+    
+    if saved_count >= max_images:
+        print(f"Folder for {species_name} already contains {saved_count} images. Skipping.")
+        return
 
-        img_url = item.get("image", "")
-        img_url_lower = img_url.lower()
-
-        if any(bad_word in img_url_lower for bad_word in BAD_WORDS):
-            continue
+    print(f"\n--- Looking up Taxon ID for: {species_name} ---")
+    taxon_id = get_taxon_id(species_name)
+    
+    if not taxon_id:
+        print(f"Could not find a valid Taxon ID for {species_name}. Skipping.")
+        return
+        
+    print(f"Found Taxon ID: {taxon_id}. Starting image download...")
+    
+    url = "https://api.inaturalist.org/v1/observations"
+    headers = {"User-Agent": "MultimodalBirdIdentifier/1.0 (Student Project)"}
+    
+    per_page = 50
+    page = 1
+    
+    while saved_count < max_images:
+        params = {
+            "taxon_id": taxon_id,
+            "has[]": "photos",
+            "quality_grade": "research",
+            "per_page": per_page,
+            "page": page
+        }
 
         try:
-            resp = requests.get(img_url, headers=headers, timeout=8)
-            if resp.status_code != 200:
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            if response.status_code != 200:
+                print(f"Error fetching API for {species_name}: HTTP {response.status_code}")
+                break
+                
+            data = response.json()
+            observations = data.get("results", [])
+        except Exception as e:
+            print(f"Search error for {species_name} on page {page}: {e}")
+            break
+
+        if not observations:
+            print(f"No more observations found for {species_name} on page {page}.")
+            break
+
+        for obs in observations:
+            if saved_count >= max_images:
+                break
+
+            photos = obs.get("photos", [])
+            if not photos:
                 continue
 
-            img = Image.open(BytesIO(resp.content))
-            width, height = img.size
-
-            if width < 300 or height < 300:
+            img_url = photos[0].get("url", "").replace("square", "large")
+            if not img_url:
                 continue
 
-            saved_count += 1
-            file_name = f"{saved_count:03d}.jpg"
-            full_path = os.path.join(save_path, file_name)
+            try:
+                resp = requests.get(img_url, headers=headers, timeout=10)
+                if resp.status_code != 200:
+                    continue
 
-            img.convert("RGB").save(full_path, "JPEG")
-            print(f"[{saved_count}/{max_images}] Saved: {file_name} ({width}x{height}px)")
+                img = Image.open(BytesIO(resp.content))
+                width, height = img.size
 
-        except Exception:
-            continue
+                if width < 500 or height < 500:
+                    continue
+
+                saved_count += 1
+                file_name = f"{saved_count:03d}.jpg"
+                full_path = os.path.join(save_path, file_name)
+
+                img.convert("RGB").save(full_path, "JPEG", quality=95)
+                print(f"[{saved_count}/{max_images}] Saved: {file_name} ({width}x{height}px)")
+
+            except Exception:
+                continue
+
+        page += 1
+        time.sleep(0.5)
 
     print(f"-> Completed for {species_name}: {saved_count} images available.")
 
 
 if __name__ == "__main__":
+    os.makedirs("data/raw/images", exist_ok=True)
+    
     for species in TARGET_SPECIES:
-        download_bird_images(species, max_images=50)
-        # 3-second pause between species to avoid rate limits
-        time.sleep(3)
+        download_bird_images(species, max_images=100)
+        time.sleep(1)

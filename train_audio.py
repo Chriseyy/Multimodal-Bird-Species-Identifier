@@ -27,7 +27,7 @@ def train():
     # Small learning rate (2e-5) is crucial for fine-tuning Transformers!
     optimizer = AdamW(model.parameters(), lr=2e-5, weight_decay=1e-2)
 
-    epochs = 10
+    epochs = 15
     print("\n--- Starting AST Fine-Tuning ---")
     
     for epoch in range(1, epochs + 1):

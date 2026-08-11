@@ -131,4 +131,4 @@ def download_bird_audio(species_name: str, max_files: int = 50, output_dir: str 
 
 if __name__ == "__main__":
     for species in TARGET_SPECIES:
-        download_bird_audio(species, max_files=50)
+        download_bird_audio(species, max_files=100)
