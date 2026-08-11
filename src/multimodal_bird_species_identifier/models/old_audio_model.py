@@ -73,7 +73,7 @@ class BirdAudioCNN(nn.Module):
         with torch.no_grad():
             self.backbone.conv1.weight = nn.Parameter(old_conv.weight.sum(dim=1, keepdim=True))
             
-        # Classifier auf 10 Vogelarten anpassen
+        # Classifier 10 classes
         in_features = self.backbone.fc.in_features
         self.backbone.fc = nn.Sequential(
             nn.Linear(in_features, 256),

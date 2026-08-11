@@ -13,7 +13,7 @@ from transformers import AutoFeatureExtractor
 from multimodal_bird_species_identifier.models.multimodal_net import MultimodalBirdIdentifier
 
 # ---------------------------------------------------------
-# 1. MULTIMODALES DATASET (Bild + Ton Paare)
+# 1. MULTIMODAL DATASET (Image + Audio Pairs)
 # ---------------------------------------------------------
 class PairedMultimodalDataset(Dataset):
     def __init__(self, image_dir="data/raw/images", audio_dir="data/raw/audio"):
@@ -29,14 +29,14 @@ class PairedMultimodalDataset(Dataset):
                 if aud_files:
                     self.samples.append((img_path, aud_files, self.class_to_idx[cls_name]))
 
-        # Bild Transformationen
+        # Image transformations
         self.img_transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
-        # AST Audio Extractor
+        # AST Audio Feature Extractor
         self.ast_extractor = AutoFeatureExtractor.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
         self.target_sr = 16000
         self.target_samples = 163840
@@ -60,23 +60,23 @@ class PairedMultimodalDataset(Dataset):
 
             inputs = self.ast_extractor(speech.numpy(), sampling_rate=self.target_sr, return_tensors="pt")
             return inputs.input_values.squeeze(0)
-        except:
+        except Exception:
             return torch.zeros((1024, 128))
 
     def __getitem__(self, idx):
         img_path, aud_files, label = self.samples[idx]
         
-        # 1. Bild laden
+        # 1. Load image
         img_tensor = self.img_transform(Image.open(img_path).convert("RGB"))
         
-        # 2. Zufälliges Audio der gleichen Vogelart laden
+        # 2. Load random audio track of the same bird species
         aud_path = random.choice(aud_files)
         audio_tensor = self.process_audio(aud_path)
         
         return audio_tensor, img_tensor, label
 
 # ---------------------------------------------------------
-# 2. TRAINING LOOP FÜR DIE FUSION
+# 2. TRAINING LOOP FOR MULTIMODAL FUSION
 # ---------------------------------------------------------
 def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -90,7 +90,7 @@ def train():
     train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
 
-    # Initialisiert das Modell und lädt die vortrainierten Gewichte der Basis-Modelle
+    # Initialize model and load pretrained weights for base submodels
     model = MultimodalBirdIdentifier(
         num_classes=len(dataset.classes),
         audio_weights_path="data/audio_model.pt",
@@ -98,7 +98,7 @@ def train():
     ).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    # WIR TRAINIEREN NUR DIE FUSION SCHICHT (geht extrem schnell!)
+    # Train ONLY the fusion classifier head (fast convergence)
     optimizer = AdamW(model.fusion_classifier.parameters(), lr=1e-3)
 
     epochs = 5
@@ -120,7 +120,7 @@ def train():
 
         train_loss /= len(train_dataset)
 
-        # Validation
+        # Validation phase
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
