@@ -1,0 +1,32 @@
+[project]
+name = "multimodal-bird-species-identifier"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Chris", email = "christian.naibaf@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "ddgs>=9.14.4",
+    "duckduckgo-search>=8.1.1",
+    "gradio>=6.22.0",
+    "numpy>=2.4.6",
+    "pandas>=3.0.5",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+    "soundfile>=0.14.0",
+    "torch>=2.13.0",
+    "torchaudio>=2.11.0",
+    "torchcodec>=0.15.0",
+    "torchvision>=0.28.0",
+    "transformers>=5.15.0",
+    "ultralytics>=8.4.117",
+]
+
+[project.scripts]
+multimodal-bird-species-identifier = "multimodal_bird_species_identifier:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
